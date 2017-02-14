@@ -1,0 +1,7 @@
+# chkconfig xinetd on
+# chkconfig rsync on
+
+sudo chmod 700 /etc/rsync*
+
+service xinetd restart
+service xinetd reload

@@ -1,0 +1,5 @@
+chmod 700 /etc/rsync.passwd 
+
+sudo nohup sh /usr/local/bin/inotify_rsync-v1.2.sh
+
+sudo vim /etc/rc.local
