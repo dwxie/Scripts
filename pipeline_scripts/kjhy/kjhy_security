@@ -1,0 +1,23 @@
+node('windows') {
+    stage('拉取代码和配置文件'){
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'app']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'kjhy-common']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${kjhy_com}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'android-common']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${android_com}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${conf_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'config']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Conf_Repo}']]])
+    }
+    stage('整理签名文件'){
+        bat '''copy /y %WORKSPACE%\\..\\..\\key\\SafeguardSecurity\\kjhy.jks app\\SecurityClient\\
+        copy /y %WORKSPACE%\\..\\..\\key\\SafeguardSecurity\\local.properties app\\SecurityClient\\'''
+            }
+    stage('整理配置文件'){
+        bat 'copy /y %WORKSPACE%\\config\\android\\kjhy\\UrlConstant.java kjhy-common\\src\\main\\java\\com\\lingdanet\\kjhy\\common\\constant\\UrlConstant.java'
+    }
+    stage('编译'){
+        bat '''cd app\\SecurityClient
+        gradle.bat -Pandroid.buildCacheDir=D:/jenkins/build-cache clean assembleRelease && exit %%ERRORLEVEL%%'''
+    }
+    stage('存档'){
+        archiveArtifacts 'app\\SecurityClient\\app\\build\\outputs\\apk\\*.apk'
+    }
+    
+}

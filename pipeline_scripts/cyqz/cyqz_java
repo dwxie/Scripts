@@ -1,0 +1,42 @@
+node {
+    stage('拉取代码'){
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${l_code}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
+    }
+    stage('拉取配置文件'){
+        checkout([$class: 'GitSCM', branches: [[name: '${conf_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${l_cfg}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Conf_Repo}']]])
+    }
+    stage('整理配置文件'){
+        sh '''cp -rf config/cyqz/{jdbc.properties,redis.properties,zk.properties} ldsaas/LD-SAAS-api/src/main/resources/
+        cp -rf config/cyqz/{jdbc.properties,redis.properties,zk.properties,xxl-job-executor.properties} ldsaas/LD-SAAS-job/LD-SAAS-job-executor/src/main/resources/
+        cp -rf config/cyqz/log4j-tomcat.properties ldsaas/LD-SAAS-api/src/main/resources/log4j.properties
+        cp -rf config/cyqz/log4j-tomcat.properties ldsaas/LD-SAAS-job/LD-SAAS-job-executor/src/main/resources/log4j.properties
+        cp -rf config/cyqz/{jdbc.properties,redis.properties,zk.properties,log4j.properties} ldsaas/LD-SAAS-DEAMON/LD-SAAS-DEAMON-cms/src/test/resources
+        cp -rf config/cyqz/{jdbc.properties,redis.properties,zk.properties,log4j.properties} ldsaas/LD-SAAS-DEAMON/LD-SAAS-DEAMON-eventScan/src/test/resources
+        cp -rf config/cyqz/{jdbc.properties,redis.properties,zk.properties,log4j.properties} ldsaas/LD-SAAS-message/LD-SAAS-message-pushapi/src/test/resources
+        cp -rf config/cyqz/{jdbc.properties,redis.properties,zk.properties,log4j.properties} ldsaas/LD-SAAS-message/LD-SAAS-message-sms/src/test/resources'''
+    }
+    stage('构建'){
+       sh '''cd ldsaas/
+        mvn -B  clean package -Dmaven.test.skip=true'''
+    }
+    stage('整理产出物'){
+        sh '''[ ! -d artifacts ] && mkdir artifacts
+        cp -f ldsaas/LD-SAAS-api/target/api.war artifacts
+        cp -f ldsaas/LD-SAAS-job/LD-SAAS-job-executor/target/scheduler.war artifacts
+        cp -rf ldsaas/LD-SAAS-DEAMON/distribution/cms artifacts
+        cp -rf ldsaas/LD-SAAS-DEAMON/distribution/eventScan artifacts
+        cp -rf ldsaas/LD-SAAS-message/distribution/messagePushapi artifacts
+        cp -rf ldsaas/LD-SAAS-message/distribution/messageSms artifacts'''
+    }
+    
+    stage('打包'){
+        sh '''cd artifacts
+        for n in `ls | grep -v war$ | grep -v tar.gz$`; do tar -zcf ${n}.tar.gz $n; done'''
+    }
+    stage('存档'){
+        archiveArtifacts 'artifacts/*.war, artifacts/*.tar.gz'
+    }
+    stage('部署'){
+        ansiblePlaybook inventory: '/opt/ansible/cyqz', limit: 'cyqz-${conf_branch}', playbook: '/opt/ansible/cyqz.yml', sudo: true
+    }
+}

@@ -1,0 +1,38 @@
+node('Mac') {
+    stage('拉取代码和配置文件'){
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${l_code}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${conf_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${l_cfg}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Conf_Repo}']]])
+    }
+    stage('替换对应环境配置文件'){
+        sh 'cp -rf config/ios/cyqz/ServerURLConfig.swift app/ChaoYangMassesSwift/ServerURLConfig.swift'
+    }
+    stage('编译cocoapods'){
+        sh '''cd app
+        export PATH=/Users/lingda/.rvm/gems/ruby-2.4.0/bin:/Users/lingda/.rvm/gems/ruby-2.4.0@global/bin:/Users/lingda/.rvm/rubies/ruby-2.4.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/lingda/.rvm/bin
+        export GEM_PATH=/Users/lingda/.rvm/gems/ruby-2.4.0:/Users/lingda/.rvm/gems/ruby-2.4.0@global
+        pod repo update
+        pod install'''
+    }
+    stage('编译ipa包'){
+        sh '''cd app
+        bash xcodebuild.sh'''
+    }
+    stage('上传app至fir.im'){
+        sh '''export PATH=/Users/lingda/.rvm/gems/ruby-2.4.0/bin:/Users/lingda/.rvm/gems/ruby-2.4.0@global/bin:/Users/lingda/.rvm/rubies/ruby-2.4.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/lingda/.rvm/bin
+        curl -X "POST" "http://api.fir.im/apps" \\
+        -H "Content-Type: application/json" \\
+        -d "{\\"type\\":\\"ios\\", \\"bundle_id\\":\\"com.Devin.www.ChaoYangMassesSwiftPre\\", \\"api_token\\":\\"c1314a418882e3e8ecd66cb1fa0acdb7\\"}" > /tmp/fir.im.log
+        token=`jq .cert.binary.token /tmp/fir.im.log | sed \'s/\\"//g\'`
+        key=`jq .cert.binary.key /tmp/fir.im.log | sed \'s/\\"//g\'`
+        upload_url=`jq .cert.binary.upload_url /tmp/fir.im.log | sed \'s/\\"//g\'`
+
+        curl -X POST $upload_url -F key=$key -F token=$token -F \'file=@app/ChaoYangMassesSwift-ipa/ChaoYangMassesSwift.ipa\' -F \'x:name=ChaoYangMassesSwift\' -F x:version=$conf_branch \\
+        -F x:build=${BUILD_TIMESTAMP}'''
+   }
+   
+    echo "${currentBuild.description}"
+    script {
+        currentBuild.description = '<img src="http://qr.liantu.com/api.php?W=180&text=https://fir.im/175q"/>'
+    }
+    echo "${currentBuild.description}"
+}

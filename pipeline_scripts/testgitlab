@@ -1,0 +1,7 @@
+node {
+    echo "${currentBuild.description}"
+    script {
+        currentBuild.description = '<img src="http://qr.liantu.com/api.php?W=180&text=https://fir.im/175q"/>'
+        }
+    echo "${currentBuild.description}"
+}

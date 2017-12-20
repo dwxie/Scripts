@@ -1,0 +1,25 @@
+node {
+    stage('拉取代码'){
+        checkout([$class: 'GitSCM', branches: [[name: '*/dev']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
+    }
+    stage('mvn构建'){
+       sh 'mvn clean package -Dmaven.test.skip=true'
+    }
+    stage('整理产出物'){
+        sh '''[ ! -d artifacts ] && mkdir artifacts
+        cp -f LD-SAAS-api/target/api.war artifacts
+        cp -f LD-SAAS-GATEWAY/LD-SAAS-GATEWAY-lx/target/gateway.war artifacts
+        cp -f LD-SAAS-job/LD-SAAS-job-executor/target/scheduler.war artifacts
+        cp -rf LD-SAAS-DEAMON/distribution/* artifacts
+        cp -rf LD-SAAS-message/distribution/* artifacts'''
+    }
+    
+    stage('打包'){
+        sh '''cd artifacts
+        for n in `ls | grep -v war$ | grep -v tar.gz$`; do tar -zcf ${n}.tar.gz $n; done'''
+    }
+    stage('部署'){
+        ansiblePlaybook inventory: '/opt/ansible/hosts', limit: 'dev', playbook: '/opt/ansible/ldsaas.yml', sudo: true
+        ansiblePlaybook inventory: '/opt/ansible/hosts', playbook: '/opt/ansible/cms.yml', sudo: true
+    }
+}
