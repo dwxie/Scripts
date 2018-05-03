@@ -1,0 +1,31 @@
+node {
+    stage('拉取代码、配置文件'){
+        checkout([$class: 'GitSCM', branches: [[name: ':^(ldsaas|tags)/${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'repos']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', name: 'ldsaas', url: 'ssh://git@223.202.103.151:10022/lingda_saas/LD-SAAS.git'], [credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', name: 'config', url: 'ssh://git@223.202.103.151:10022/lingda_ops/LD-SAAS-config.git']]])
+    }
+    stage('整理repos'){
+        sh '''cd repos
+        `echo ${branch} | grep tags > /dev/null` && git checkout ${branch} || git checkout remotes/ldsaas/${branch}
+        cp -rf . ../ldsaas
+        git checkout remotes/config/${conf_branch} && cp -rf . ../config'''
+    }
+    stage('整理jar项目配置文件'){
+        sh 'cp -rf config/cyqz/zk.properties ldsaas/LD-SAAS-message/LD-SAAS-message-server/src/test/resources'
+    }
+    stage('mvn构建'){
+       sh '''cd ldsaas/LD-SAAS-message/LD-SAAS-message-server
+       mvn -B  clean package -Dmaven.test.skip=true'''
+    }
+    stage('整理产出物'){
+        sh '''[ ! -d artifacts ] && mkdir artifacts
+        cp -rf ldsaas/LD-SAAS-message/distribution/* artifacts'''
+    }
+    
+    stage('打包、存档'){
+        sh '''cd artifacts
+        for n in `ls | grep -v war$ | grep -v tar.gz$`; do tar -zcf ${n}.tar.gz $n; done'''
+        archiveArtifacts 'artifacts/*.war, artifacts/*.tar.gz'
+    }
+	stage('部署'){
+	    ansiblePlaybook inventory: '/opt/ansible/cyqz', limit: 'cyqz-${conf_branch}', playbook: '/opt/ansible/cyqz.yml', sudo: true, tags: 'messageServer'
+	}
+}

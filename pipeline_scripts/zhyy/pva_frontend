@@ -1,0 +1,19 @@
+node {
+    stage('拉取代码'){
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/aice/pva_frontend.git']]])
+    }
+    stage('npm build'){
+        sh '''npm install
+        npm run build'''
+    }
+    stage('归档'){
+        sh '''rm -rf build.tar.gz
+        cd dist
+        tar -czf build.tar.gz *
+        mv build.tar.gz ../'''
+        archiveArtifacts 'build.tar.gz'
+    }
+    stage('部署'){
+        ansiblePlaybook inventory: '/opt/ansible/lingmou', limit: 'lm-${conf_branch}', playbook: '/opt/ansible/lingmou.yml', sudo: true, tags: 'pva-frontend'
+    }
+}
