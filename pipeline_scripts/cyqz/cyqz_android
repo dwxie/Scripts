@@ -1,8 +1,8 @@
 node('windows') {
     stage('拉取代码和配置文件'){
-        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${l_code}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
-        checkout([$class: 'GitSCM', branches: [[name: '${com_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${comm_code}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Common_Repo}']]])
-        checkout([$class: 'GitSCM', branches: [[name: '${conf_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: '${l_cfg}']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Conf_Repo}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'app']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/lingda-android/android-ChaoYangQunZhong.git']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${com_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'android-common']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/lingda-android/android-common.git']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${conf_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'config']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/lingda_ops/LD-SAAS-config.git']]])
     }
     stage('整理签名文件'){
         bat '''copy /y %WORKSPACE%\\..\\..\\key\\android-ChaoYangQunZhong\\cyqz.jks app\\

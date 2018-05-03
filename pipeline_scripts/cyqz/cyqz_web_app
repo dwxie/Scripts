@@ -1,6 +1,6 @@
 node {
     stage('拉取代码'){
-        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/lingda_web/cyqz-app.git']]])
     }
     stage('npm build'){
         sh '''npm install
@@ -14,6 +14,6 @@ node {
         archiveArtifacts 'dist.tar.gz'
     }
     stage('部署'){
-        ansiblePlaybook inventory: '/opt/ansible/cyqz', limit: 'cyqz-${conf_branch}', playbook: '/opt/ansible/cyqz_web.yml', sudo: true
+        ansiblePlaybook inventory: '/opt/ansible/cyqz', limit: 'cyqz-${conf_branch}', playbook: '/opt/ansible/cyqz_web.yml', sudo: true, tags: 'app'
     }
 }

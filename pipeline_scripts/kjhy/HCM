@@ -1,6 +1,6 @@
 node {
     stage('拉取代码'){
-        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: '${Code_Repo}']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@git.topvdn.com:10022/lingda_web/hcm.git']]])
     }
     stage('npm build'){
         sh '''npm install
@@ -15,6 +15,6 @@ node {
         archiveArtifacts 'build.tar.gz'
     }
     stage('部署'){
-        ansiblePlaybook inventory: '/opt/ansible/${inventory}', limit: '${conf_branch}', playbook: '/opt/ansible/hcm.yml', sudo: true
+        ansiblePlaybook inventory: '/opt/ansible/hosts', limit: '${conf_branch}', playbook: '/opt/ansible/hcm.yml', sudo: true
     }
 }
