@@ -1,0 +1,54 @@
+pipeline {
+  agent any
+  environment {
+    project_name = "${project_short_name}Server"
+//  project_short_name = 'api'
+  }
+  stages {
+    stage('拉取代码配置文件'){
+	  steps {
+        deleteDir()
+	    checkout([$class: 'GitSCM', branches: [[name: '${common_branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'app']],  submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/lingmou-service/lingmou.git']]])
+        checkout([$class: 'GitSCM', branches: [[name: '${branch}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: "app/lingmou/lingmou-service/lingmou-${project_short_name}-server"]],  submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: "ssh://git@223.202.103.151:10022/lingmou-service/lingmou-${project_short_name}-server.git"]]])
+        checkout([$class: 'GitSCM', branches: [[name: '${conf}']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'config']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7cd4f75c-3fac-4ac0-a243-cdf24aa54ea1', url: 'ssh://git@223.202.103.151:10022/lingda_ops/LD-SAAS-config.git']]])
+    }}
+    stage('替换配置文件'){
+	  steps {
+        sh "cp -rf config/lingmou2.0/${project_name}/* app/lingmou/lingmou-service/lingmou-${project_short_name}-server/src/main/resources/"
+	  }
+    }
+	stage('解决依赖'){
+	  steps {
+        sh '''cd $WORKSPACE/app/lingmou/lingmou-common
+            mvn clean install  -Dmaven.test.skip=true
+            cd $WORKSPACE/app/lingmou/lingmou-model
+            mvn clean install  -Dmaven.test.skip=true
+            cd $WORKSPACE/app/lingmou/lingmou-dao
+            mvn clean install  -Dmaven.test.skip=true'''
+	  }
+    }	
+    stage('构建'){
+	  steps {
+        sh '''cd app/lingmou/lingmou-service/lingmou-${project_short_name}-server
+            mvn -B  clean package -Dmaven.test.skip=true'''
+	  }
+    }
+	stage('整理安装包'){
+	  steps {
+	    sh """[ ! -d artifacts ] && mkdir artifacts
+            cp app/lingmou/lingmou-service/lingmou-${project_short_name}-server/target/${project_name}.zip artifacts
+            /usr/bin/cp artifacts/${project_name}.zip ../lingmou2.0/"""
+	  }
+    }
+    stage('存档'){
+	  steps {
+        archiveArtifacts 'artifacts/*.zip'
+	  }
+    }
+    stage('部署'){
+	  steps {
+		ansiblePlaybook inventory: '/opt/ansible/lingmou2.0', limit: 'lm2.0-${conf}', playbook: '/opt/ansible/lingmou2.0.yml', sudo: true, tags: "${project_name}"
+	  }
+    }
+  }
+}
